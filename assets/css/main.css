@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-900 text-white;
+}
+
+.knob {
+  @apply w-16 h-16 rounded-full border-4 border-gray-600 bg-gray-800 relative cursor-pointer;
+  background: radial-gradient(circle at 30% 30%, #4a5568, #2d3748);
+}
+
+.knob::after {
+  content: '';
+  @apply absolute w-1 h-6 bg-white rounded-full;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  transform-origin: center 28px;
+}
+
+.frequency-chart {
+  @apply bg-gray-800 border border-gray-600 rounded-lg p-4;
+}

@@ -48,11 +48,27 @@ const chartOption = computed(() => {
   const frequencies = props.frequencyData?.map(d => d.frequency) || [];
   const magnitudes = props.frequencyData?.map(d => d.magnitude) || [];
   
-  // Generate sample data if no real data provided
-  const sampleFreqs = frequencies.length > 0 ? frequencies : 
-    Array.from({ length: 200 }, (_, i) => 10 * Math.pow(10, i / 50));
-  const sampleMags = magnitudes.length > 0 ? magnitudes :
-    sampleFreqs.map(f => -6 * Math.log10(1 + Math.pow(f / 500, 1.5)));
+  // Use real data if available, otherwise generate more realistic sample data
+  let sampleFreqs, sampleMags;
+  
+  if (frequencies.length > 0 && magnitudes.length > 0) {
+    sampleFreqs = frequencies;
+    sampleMags = magnitudes;
+  } else {
+    // Generate more realistic tone stack response curve
+    sampleFreqs = Array.from({ length: 512 }, (_, i) => 10 * Math.pow(10, i / 102.4)); // 10Hz to 100kHz
+    sampleMags = sampleFreqs.map(f => {
+      // Simulate typical guitar tone stack response
+      let mag = 0;
+      if (f < 80) mag = -12 * Math.log10(f / 80 + 1); // Bass rolloff
+      else if (f < 300) mag = -2;
+      else if (f < 800) mag = -8 * Math.sin(Math.PI * (f - 300) / 1000) - 2;
+      else if (f < 3000) mag = -6;
+      else if (f < 8000) mag = -3 * Math.sin(Math.PI * (f - 3000) / 10000) - 6;
+      else mag = -12 + 6 * Math.exp(-(f - 8000) / 5000);
+      return Math.max(mag, -48); // Limit minimum to -48dB
+    });
+  }
 
   return {
     backgroundColor: 'transparent',
@@ -72,7 +88,6 @@ const chartOption = computed(() => {
       axisLabel: {
         formatter: (value: number) => {
           if (value >= 1000) return `${value / 1000}k`;
-          if (value >= 10000) return `${value / 1000}k`;
           return value.toString();
         }
       }

@@ -48,6 +48,9 @@ const chartOption = computed(() => {
   const frequencies = props.frequencyData?.map(d => d.frequency) || [];
   const magnitudes = props.frequencyData?.map(d => d.magnitude) || [];
   
+  console.log('Chart data:', props.frequencyData);
+  console.log('Frequencies length:', frequencies.length);
+  
   // Use real data if available, otherwise generate more realistic sample data
   let sampleFreqs, sampleMags;
   
@@ -94,7 +97,7 @@ const chartOption = computed(() => {
       nameLocation: 'middle',
       nameGap: 30,
       min: 10,
-      max: 20000,
+      max: 100000,
       axisLabel: {
         formatter: (value: number) => {
           if (value >= 1000) return `${value / 1000}k`;
@@ -108,7 +111,7 @@ const chartOption = computed(() => {
       nameLocation: 'middle',
       nameGap: 50,
       min: -40,
-      max: 0
+      max: 10
     },
     series: [
       {

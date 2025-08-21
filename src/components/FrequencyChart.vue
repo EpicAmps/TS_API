@@ -45,8 +45,13 @@ const props = defineProps<{
 }>();
 
 const chartOption = computed(() => {
+  console.log('Chart data:', props.frequencyData);
+  
   const frequencies = props.frequencyData?.map(d => d.frequency) || [];
   const magnitudes = props.frequencyData?.map(d => d.magnitude) || [];
+  
+  console.log('Frequencies length:', frequencies.length);
+  console.log('Magnitudes:', magnitudes.slice(0, 5));
   
   // Use real data if available, otherwise generate more realistic sample data
   let sampleFreqs, sampleMags;
@@ -54,19 +59,31 @@ const chartOption = computed(() => {
   if (frequencies.length > 0 && magnitudes.length > 0) {
     sampleFreqs = frequencies;
     sampleMags = magnitudes;
+    console.log('Using real API data');
   } else {
+    console.log('Using sample data');
     // Generate more realistic tone stack response curve
-    sampleFreqs = Array.from({ length: 512 }, (_, i) => 10 * Math.pow(10, i / 102.4)); // 10Hz to 100kHz
+    sampleFreqs = [];
+    for (let i = 0; i < 200; i++) {
+      sampleFreqs.push(10 * Math.pow(10, i / 40)); // 10Hz to 100kHz
+    }
     sampleMags = sampleFreqs.map(f => {
       // Simulate typical guitar tone stack response
       let mag = 0;
-      if (f < 80) mag = -12 * Math.log10(f / 80 + 1); // Bass rolloff
-      else if (f < 300) mag = -2;
-      else if (f < 800) mag = -8 * Math.sin(Math.PI * (f - 300) / 1000) - 2;
-      else if (f < 3000) mag = -6;
-      else if (f < 8000) mag = -3 * Math.sin(Math.PI * (f - 3000) / 10000) - 6;
-      else mag = -12 + 6 * Math.exp(-(f - 8000) / 5000);
-      return Math.max(mag, -48); // Limit minimum to -48dB
+      if (f < 100) {
+        mag = -20 * Math.log10(f / 100 + 1); // Bass rolloff
+      } else if (f < 500) {
+        mag = -3;
+      } else if (f < 1000) {
+        mag = -8 + 3 * Math.sin(Math.PI * (f - 500) / 1000);
+      } else if (f < 3000) {
+        mag = -5;
+      } else if (f < 8000) {
+        mag = -2 + 4 * Math.sin(Math.PI * (f - 3000) / 10000);
+      } else {
+        mag = -15 + 10 * Math.exp(-(f - 8000) / 5000);
+      }
+      return Math.max(mag, -40);
     });
   }
 
@@ -84,7 +101,7 @@ const chartOption = computed(() => {
       nameLocation: 'middle',
       nameGap: 30,
       min: 10,
-      max: 100000,
+      max: 20000,
       axisLabel: {
         formatter: (value: number) => {
           if (value >= 1000) return `${value / 1000}k`;
@@ -97,7 +114,7 @@ const chartOption = computed(() => {
       name: 'Magnitude (dB)',
       nameLocation: 'middle',
       nameGap: 50,
-      min: -48,
+      min: -40,
       max: 10
     },
     series: [

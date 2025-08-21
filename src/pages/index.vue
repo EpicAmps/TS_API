@@ -4,9 +4,9 @@
       <!-- Header -->
       <header class="text-center mb-8">
         <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
-          Audio Simulation API
+          Yet Another Tonestack Calculator
         </h1>
-        <p class="text-gray-400">Professional guitar tone stack simulation and audio processing</p>
+        <p class="text-gray-400">Interactive guitar tone stack simulation and frequency response analyzer</p>
       </header>
 
       <!-- Tone Stack Selector -->
@@ -160,6 +160,6 @@ function formatComponentValue(component: ToneStackComponent): string {
 
 // Set page title
 useHead({
-  title: 'Audio Simulation API - Guitar Tone Stack Processing'
+  title: 'Yet Another Tonestack Calculator - Guitar Tone Stack Analysis'
 });
 </script>

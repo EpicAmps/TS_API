@@ -1,7 +1,7 @@
 import { getToneStackById } from '~/data/tone-stacks';
 import { 
-  calculateToneStackFrequencyResponse,
-  convertComponentValues
+  calculateFrequencyResponse,
+  presetToParameters
 } from '~/utils/tonestack-math';
 
 export default defineEventHandler(async (event) => {
@@ -26,18 +26,13 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Convert preset to circuit parameters
-    const circuit = convertComponentValues(toneStack);
+    // Convert to parameters
+    const params = presetToParameters(toneStack, controls);
     
-    // Apply control values
-    circuit.treble = controls.treble ?? circuit.treble;
-    circuit.bass = controls.bass ?? circuit.bass;
-    circuit.mid = controls.mid ?? circuit.mid;
-    
-    // Calculate frequency response using proper circuit analysis
-    const frequencyResponse = calculateToneStackFrequencyResponse(
+    // Calculate frequency response
+    const frequencyResponse = calculateFrequencyResponse(
       toneStackId,
-      circuit,
+      params,
       10,    // 10 Hz start
       20000, // 20 kHz end  
       512    // Number of points
@@ -48,7 +43,7 @@ export default defineEventHandler(async (event) => {
       data: {
         toneStack,
         frequencyResponse,
-        circuit,
+        params,
         controls
       }
     };

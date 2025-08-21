@@ -7,11 +7,12 @@ export const toneStackPresets: ToneStackPreset[] = [
     brand: 'Fender',
     description: 'Classic Fender Treble-Mid-Bass tone stack found in Twin Reverb and other amps',
     components: [
-      { id: 'R1', type: 'resistor', value: 56000, unit: 'Ω', label: 'Treble Load' },
+      { id: 'R1', type: 'resistor', value: 56000, unit: 'Ω', label: 'Slope Resistor' },
       { id: 'R2', type: 'resistor', value: 6800, unit: 'Ω', label: 'Mid Resistor' },
       { id: 'R3', type: 'resistor', value: 100000, unit: 'Ω', label: 'Bass Load' },
-      { id: 'C1', type: 'capacitor', value: 0.00025, unit: 'µF', label: 'Treble Cap' },
-      { id: 'C2', type: 'capacitor', value: 0.022, unit: 'µF', label: 'Bass Cap' },
+      { id: 'C1', type: 'capacitor', value: 250e-12, unit: 'F', label: 'Treble Cap' },
+      { id: 'C2', type: 'capacitor', value: 22e-9, unit: 'F', label: 'Bass Cap' },
+      { id: 'C3', type: 'capacitor', value: 250e-12, unit: 'F', label: 'Slope Cap' },
       { id: 'P1', type: 'potentiometer', value: 250000, unit: 'Ω', label: 'Treble' },
       { id: 'P2', type: 'potentiometer', value: 25000, unit: 'Ω', label: 'Mid' },
       { id: 'P3', type: 'potentiometer', value: 250000, unit: 'Ω', label: 'Bass' }
@@ -28,11 +29,12 @@ export const toneStackPresets: ToneStackPreset[] = [
     brand: 'Marshall',
     description: 'Aggressive Marshall tone stack with pronounced midrange character',
     components: [
-      { id: 'R1', type: 'resistor', value: 33000, unit: 'Ω', label: 'Treble Load' },
+      { id: 'R1', type: 'resistor', value: 33000, unit: 'Ω', label: 'Slope Resistor' },
       { id: 'R2', type: 'resistor', value: 4700, unit: 'Ω', label: 'Mid Resistor' },
       { id: 'R3', type: 'resistor', value: 82000, unit: 'Ω', label: 'Bass Load' },
-      { id: 'C1', type: 'capacitor', value: 0.00022, unit: 'µF', label: 'Treble Cap' },
-      { id: 'C2', type: 'capacitor', value: 0.022, unit: 'µF', label: 'Bass Cap' },
+      { id: 'C1', type: 'capacitor', value: 220e-12, unit: 'F', label: 'Treble Cap' },
+      { id: 'C2', type: 'capacitor', value: 22e-9, unit: 'F', label: 'Bass Cap' },
+      { id: 'C3', type: 'capacitor', value: 220e-12, unit: 'F', label: 'Slope Cap' },
       { id: 'P1', type: 'potentiometer', value: 500000, unit: 'Ω', label: 'Treble' },
       { id: 'P2', type: 'potentiometer', value: 25000, unit: 'Ω', label: 'Mid' },
       { id: 'P3', type: 'potentiometer', value: 1000000, unit: 'Ω', label: 'Bass' }
@@ -50,7 +52,7 @@ export const toneStackPresets: ToneStackPreset[] = [
     description: 'Simple but effective Vox cut control for taming brightness',
     components: [
       { id: 'R1', type: 'resistor', value: 1000000, unit: 'Ω', label: 'Cut Resistor' },
-      { id: 'C1', type: 'capacitor', value: 0.0047, unit: 'µF', label: 'Cut Cap' },
+      { id: 'C1', type: 'capacitor', value: 4.7e-9, unit: 'F', label: 'Cut Cap' },
       { id: 'P1', type: 'potentiometer', value: 1000000, unit: 'Ω', label: 'Cut' }
     ],
     controls: {
@@ -63,11 +65,12 @@ export const toneStackPresets: ToneStackPreset[] = [
     brand: 'Custom',
     description: 'Modern high-gain tone stack with extended frequency response',
     components: [
-      { id: 'R1', type: 'resistor', value: 47000, unit: 'Ω', label: 'Treble Load' },
+      { id: 'R1', type: 'resistor', value: 47000, unit: 'Ω', label: 'Slope Resistor' },
       { id: 'R2', type: 'resistor', value: 3900, unit: 'Ω', label: 'Mid Resistor' },
       { id: 'R3', type: 'resistor', value: 120000, unit: 'Ω', label: 'Bass Load' },
-      { id: 'C1', type: 'capacitor', value: 0.00015, unit: 'µF', label: 'Treble Cap' },
-      { id: 'C2', type: 'capacitor', value: 0.033, unit: 'µF', label: 'Bass Cap' },
+      { id: 'C1', type: 'capacitor', value: 150e-12, unit: 'F', label: 'Treble Cap' },
+      { id: 'C2', type: 'capacitor', value: 33e-9, unit: 'F', label: 'Bass Cap' },
+      { id: 'C3', type: 'capacitor', value: 150e-12, unit: 'F', label: 'Slope Cap' },
       { id: 'P1', type: 'potentiometer', value: 500000, unit: 'Ω', label: 'Treble' },
       { id: 'P2', type: 'potentiometer', value: 50000, unit: 'Ω', label: 'Mid' },
       { id: 'P3', type: 'potentiometer', value: 500000, unit: 'Ω', label: 'Bass' }
@@ -85,7 +88,7 @@ export const toneStackPresets: ToneStackPreset[] = [
     description: 'Classic RAT pedal tone control with simple but effective filtering',
     components: [
       { id: 'R1', type: 'resistor', value: 1000, unit: 'Ω', label: 'Filter Resistor' },
-      { id: 'C1', type: 'capacitor', value: 0.0033, unit: 'µF', label: 'Filter Cap' },
+      { id: 'C1', type: 'capacitor', value: 3.3e-9, unit: 'F', label: 'Filter Cap' },
       { id: 'P1', type: 'potentiometer', value: 100000, unit: 'Ω', label: 'Filter' }
     ],
     controls: {

@@ -50,9 +50,9 @@ const chartOption = computed(() => {
   
   // Generate sample data if no real data provided
   const sampleFreqs = frequencies.length > 0 ? frequencies : 
-    Array.from({ length: 100 }, (_, i) => 20 * Math.pow(10, i / 25));
+    Array.from({ length: 200 }, (_, i) => 10 * Math.pow(10, i / 50));
   const sampleMags = magnitudes.length > 0 ? magnitudes :
-    sampleFreqs.map(f => -3 * Math.log10(1 + Math.pow(f / 1000, 2)));
+    sampleFreqs.map(f => -6 * Math.log10(1 + Math.pow(f / 500, 1.5)));
 
   return {
     backgroundColor: 'transparent',
@@ -67,11 +67,12 @@ const chartOption = computed(() => {
       name: 'Frequency (Hz)',
       nameLocation: 'middle',
       nameGap: 30,
-      min: 20,
-      max: 20000,
+      min: 10,
+      max: 100000,
       axisLabel: {
         formatter: (value: number) => {
           if (value >= 1000) return `${value / 1000}k`;
+          if (value >= 10000) return `${value / 1000}k`;
           return value.toString();
         }
       }
@@ -81,7 +82,7 @@ const chartOption = computed(() => {
       name: 'Magnitude (dB)',
       nameLocation: 'middle',
       nameGap: 50,
-      min: -20,
+      min: -48,
       max: 10
     },
     series: [

@@ -48,7 +48,7 @@ const chartOption = computed(() => {
   console.log('Chart data:', props.frequencyData);
   
   const frequencies = props.frequencyData?.map(d => d.frequency) || [];
-  const magnitudes = props.frequencyData?.map(d => d.magnitude) || [];
+  const magnitudes = props.frequencyData?.map(d => -Math.abs(d.magnitude)) || [];
   
   console.log('Frequencies length:', frequencies.length);
   console.log('Magnitudes:', magnitudes.slice(0, 5));
@@ -100,8 +100,8 @@ const chartOption = computed(() => {
       name: 'Frequency (Hz)',
       nameLocation: 'middle',
       nameGap: 30,
-      min: 10,
-      max: 20000,
+      min: 1,
+      max: 100000,
       axisLabel: {
         formatter: (value: number) => {
           if (value >= 1000) return `${value / 1000}k`;
@@ -114,8 +114,8 @@ const chartOption = computed(() => {
       name: 'Magnitude (dB)',
       nameLocation: 'middle',
       nameGap: 50,
-      min: -40,
-      max: 10
+      min: -48,
+      max: 0
     },
     series: [
       {

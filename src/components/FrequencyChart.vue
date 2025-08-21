@@ -45,13 +45,8 @@ const props = defineProps<{
 }>();
 
 const chartOption = computed(() => {
-  console.log('Chart data:', props.frequencyData);
-  
   const frequencies = props.frequencyData?.map(d => d.frequency) || [];
-  const magnitudes = props.frequencyData?.map(d => -Math.abs(d.magnitude)) || [];
-  
-  console.log('Frequencies length:', frequencies.length);
-  console.log('Magnitudes:', magnitudes.slice(0, 5));
+  const magnitudes = props.frequencyData?.map(d => d.magnitude) || [];
   
   // Use real data if available, otherwise generate more realistic sample data
   let sampleFreqs, sampleMags;
@@ -59,13 +54,11 @@ const chartOption = computed(() => {
   if (frequencies.length > 0 && magnitudes.length > 0) {
     sampleFreqs = frequencies;
     sampleMags = magnitudes;
-    console.log('Using real API data');
   } else {
-    console.log('Using sample data');
     // Generate more realistic tone stack response curve
     sampleFreqs = [];
-    for (let i = 0; i < 200; i++) {
-      sampleFreqs.push(10 * Math.pow(10, i / 40)); // 10Hz to 100kHz
+    for (let i = 0; i < 512; i++) {
+      sampleFreqs.push(10 * Math.pow(10, i / 128)); // 10Hz to 100kHz
     }
     sampleMags = sampleFreqs.map(f => {
       // Simulate typical guitar tone stack response
@@ -100,8 +93,8 @@ const chartOption = computed(() => {
       name: 'Frequency (Hz)',
       nameLocation: 'middle',
       nameGap: 30,
-      min: 1,
-      max: 100000,
+      min: 10,
+      max: 20000,
       axisLabel: {
         formatter: (value: number) => {
           if (value >= 1000) return `${value / 1000}k`;
@@ -114,7 +107,7 @@ const chartOption = computed(() => {
       name: 'Magnitude (dB)',
       nameLocation: 'middle',
       nameGap: 50,
-      min: -48,
+      min: -40,
       max: 0
     },
     series: [

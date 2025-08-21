@@ -1,10 +1,8 @@
 import { getToneStackById } from '~/data/tone-stacks';
 import { 
-  calculateFenderTMBCoefficients,
-  calculateMarshallCoefficients,
-  calculateVoxCoefficients
-} from '~/utils/biquad';
-import { calculateFrequencyResponse } from '~/utils/frequency-analysis';
+  calculateToneStackFrequencyResponse,
+  convertComponentValues
+} from '~/utils/tonestack-math';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
@@ -28,52 +26,29 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Calculate filter coefficients
-    let coefficients;
+    // Convert preset to circuit parameters
+    const circuit = convertComponentValues(toneStack);
     
-    switch (toneStackId) {
-      case 'fender-tmb':
-        coefficients = calculateFenderTMBCoefficients(
-          controls.bass ?? 0.5,
-          controls.mid ?? 0.5,
-          controls.treble ?? 0.5,
-          sampleRate
-        );
-        break;
-        
-      case 'marshall-jcm800':
-        coefficients = calculateMarshallCoefficients(
-          controls.bass ?? 0.5,
-          controls.mid ?? 0.5,
-          controls.treble ?? 0.5,
-          sampleRate
-        );
-        break;
-        
-      case 'vox-ac30':
-        coefficients = calculateVoxCoefficients(
-          controls.cut ?? 0.5,
-          sampleRate
-        );
-        break;
-        
-      default:
-        coefficients = calculateFenderTMBCoefficients(
-          controls.bass ?? 0.5,
-          controls.mid ?? 0.5,
-          controls.treble ?? 0.5,
-          sampleRate
-        );
-    }
-
-    const frequencyResponse = calculateFrequencyResponse(coefficients, sampleRate);
+    // Apply control values
+    circuit.treble = controls.treble ?? circuit.treble;
+    circuit.bass = controls.bass ?? circuit.bass;
+    circuit.mid = controls.mid ?? circuit.mid;
+    
+    // Calculate frequency response using proper circuit analysis
+    const frequencyResponse = calculateToneStackFrequencyResponse(
+      toneStackId,
+      circuit,
+      10,    // 10 Hz start
+      20000, // 20 kHz end  
+      512    // Number of points
+    );
 
     return {
       success: true,
       data: {
         toneStack,
         frequencyResponse,
-        filterCoefficients: coefficients,
+        circuit,
         controls
       }
     };

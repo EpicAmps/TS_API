@@ -24,6 +24,8 @@
     "chart.js": "^4.4.0",
     "chartjs-adapter-date-fns": "^3.0.0",
     "date-fns": "^2.30.0",
-    "vue-chartjs": "^5.2.0"
+    "echarts": "^5.6.0",
+    "vue-chartjs": "^5.2.0",
+    "vue-echarts": "^7.0.3"
   }
 }

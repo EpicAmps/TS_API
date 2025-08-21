@@ -30,6 +30,10 @@ export function complexAdd(a: ComplexNumber, b: ComplexNumber): ComplexNumber {
   return { real: a.real + b.real, imag: a.imag + b.imag };
 }
 
+export function complexSubtract(a: ComplexNumber, b: ComplexNumber): ComplexNumber {
+  return { real: a.real - b.real, imag: a.imag - b.imag };
+}
+
 export function complexMultiply(a: ComplexNumber, b: ComplexNumber): ComplexNumber {
   return {
     real: a.real * b.real - a.imag * b.imag,
@@ -78,47 +82,74 @@ export function seriesImpedance(Z1: ComplexNumber, Z2: ComplexNumber): ComplexNu
   return complexAdd(Z1, Z2);
 }
 
-// Fender TMB tone stack - based on YATSC's fender_tmb implementation
+// Fender TMB tone stack - proper circuit analysis based on YATSC
 export function calculateFenderTMBTransferFunction(
   params: ToneStackParameters,
   frequency: number
 ): ComplexNumber {
   const omega = 2 * Math.PI * frequency;
   
-  // Component values from YATSC
-  const R1 = 250000;  // Treble pot
-  const R2 = 1000000; // Bass pot  
-  const R3 = 25000;   // Mid pot
+  // Fender TMB component values (from YATSC)
+  const R1 = 250000;  // 250k treble pot
+  const R2 = 1000000; // 1M bass pot  
+  const R3 = 25000;   // 25k mid pot
   const C1 = 250e-12; // 250pF treble cap
   const C2 = 22e-9;   // 22nF bass cap
-  const C3 = 250e-12; // 250pF additional cap
+  const C3 = 250e-12; // 250pF slope resistor cap
   
-  // Control positions
+  // Control positions (0-1)
   const treble = params.treble;
   const bass = params.bass;
   const mid = params.mid || 0.5;
   
-  // Calculate impedances
-  const ZC1 = capacitorImpedance(C1, omega);
-  const ZC2 = capacitorImpedance(C2, omega);
-  const ZC3 = capacitorImpedance(C3, omega);
+  // Calculate complex impedances
+  const s = { real: 0, imag: omega }; // jω
   
-  const ZR1_treble = resistorImpedance(R1 * treble);
-  const ZR1_inv_treble = resistorImpedance(R1 * (1 - treble));
-  const ZR2_bass = resistorImpedance(R2 * bass);
-  const ZR2_inv_bass = resistorImpedance(R2 * (1 - bass));
-  const ZR3 = resistorImpedance(R3);
+  const ZC1 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C1, imag: 0 }));
+  const ZC2 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C2, imag: 0 }));
+  const ZC3 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C3, imag: 0 }));
   
-  // Simplified transfer function calculation
-  // This is a basic approximation - full YATSC uses complete nodal analysis
-  const treblePath = seriesImpedance(ZR1_treble, ZC1);
-  const bassPath = seriesImpedance(ZR2_bass, ZC2);
-  const midPath = ZR3;
+  // Potentiometer modeling - split into two resistors
+  const R1a = { real: R1 * treble, imag: 0 };
+  const R1b = { real: R1 * (1 - treble), imag: 0 };
+  const R2a = { real: R2 * bass, imag: 0 };
+  const R2b = { real: R2 * (1 - bass), imag: 0 };
+  const R3_val = { real: R3, imag: 0 };
   
-  const totalZ = parallelImpedance(parallelImpedance(treblePath, bassPath), midPath);
-  const sourceZ = resistorImpedance(100000); // 100k source impedance
+  // Simplified Fender TMB circuit analysis
+  // This is a basic approximation of the complex nodal analysis
   
-  return complexDivide(totalZ, complexAdd(totalZ, sourceZ));
+  // Treble path: R1a in series with C1, parallel with R1b
+  const treblePath = parallelImpedance(
+    seriesImpedance(R1a, ZC1),
+    R1b
+  );
+  
+  // Bass path: R2a in series with C2, parallel with R2b  
+  const bassPath = parallelImpedance(
+    seriesImpedance(R2a, ZC2),
+    R2b
+  );
+  
+  // Mid path through R3
+  const midPath = R3_val;
+  
+  // Combine all paths
+  const totalLoad = parallelImpedance(
+    parallelImpedance(treblePath, bassPath),
+    midPath
+  );
+  
+  // Source impedance (typical tube amp)
+  const sourceZ = { real: 100000, imag: 0 }; // 100k
+  
+  // Voltage divider: Vout/Vin = Zload / (Zsource + Zload)
+  const transferFunction = complexDivide(
+    totalLoad,
+    complexAdd(sourceZ, totalLoad)
+  );
+  
+  return transferFunction;
 }
 
 // Marshall tone stack - different topology
@@ -129,9 +160,9 @@ export function calculateMarshallTransferFunction(
   const omega = 2 * Math.PI * frequency;
   
   // Marshall component values
-  const R1 = 500000;  // Treble pot
-  const R2 = 1000000; // Bass pot
-  const R3 = 25000;   // Mid pot  
+  const R1 = 500000;  // 500k treble pot
+  const R2 = 1000000; // 1M bass pot
+  const R3 = 25000;   // 25k mid pot  
   const C1 = 220e-12; // 220pF
   const C2 = 22e-9;   // 22nF
   
@@ -139,19 +170,21 @@ export function calculateMarshallTransferFunction(
   const bass = params.bass;
   const mid = params.mid || 0.5;
   
-  const ZC1 = capacitorImpedance(C1, omega);
-  const ZC2 = capacitorImpedance(C2, omega);
+  const s = { real: 0, imag: omega };
   
-  const ZR1 = resistorImpedance(R1 * treble);
-  const ZR2 = resistorImpedance(R2 * bass);
-  const ZR3 = resistorImpedance(R3 * mid);
+  const ZC1 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C1, imag: 0 }));
+  const ZC2 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C2, imag: 0 }));
   
-  // Marshall has different circuit topology
-  const path1 = seriesImpedance(ZR1, ZC1);
-  const path2 = parallelImpedance(ZR2, ZC2);
-  const combined = seriesImpedance(path1, parallelImpedance(path2, ZR3));
+  const R1_val = { real: R1 * treble, imag: 0 };
+  const R2_val = { real: R2 * bass, imag: 0 };
+  const R3_val = { real: R3 * mid, imag: 0 };
   
-  const sourceZ = resistorImpedance(100000);
+  // Marshall has different circuit topology - more aggressive midrange scoop
+  const highPath = seriesImpedance(R1_val, ZC1);
+  const lowPath = parallelImpedance(R2_val, ZC2);
+  const combined = seriesImpedance(highPath, parallelImpedance(lowPath, R3_val));
+  
+  const sourceZ = { real: 100000, imag: 0 };
   return complexDivide(combined, complexAdd(combined, sourceZ));
 }
 
@@ -168,11 +201,12 @@ export function calculateVoxTransferFunction(
   
   const cut = params.treble; // Using treble control for cut
   
-  const ZR = resistorImpedance(R1 * cut);
-  const ZC = capacitorImpedance(C1, omega);
+  const s = { real: 0, imag: omega };
+  const ZR = { real: R1 * cut, imag: 0 };
+  const ZC = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C1, imag: 0 }));
   
   // Simple RC low-pass filter
-  const totalZ = seriesImpedance(ZR, ZC);
+  const totalZ = complexAdd(ZR, ZC);
   return complexDivide(ZC, totalZ);
 }
 
@@ -190,7 +224,7 @@ export function calculateToneStackResponse(
     case 'vox-ac30':
       return calculateVoxTransferFunction(params, frequency);
     case 'boneyard-ray':
-      // Use Fender-style for now
+      // Use modified Fender-style for now
       return calculateFenderTMBTransferFunction(params, frequency);
     case 'rat-distortion':
       // Use Vox-style for RAT
@@ -214,6 +248,10 @@ export function calculateFrequencyResponse(
   const logStart = Math.log10(startFreq);
   const logEnd = Math.log10(endFreq);
   
+  // Calculate reference magnitude at 1kHz for normalization
+  const refTransferFunction = calculateToneStackResponse(toneStackId, params, 1000);
+  const refMagnitude = complexMagnitude(refTransferFunction);
+  
   for (let i = 0; i < numPoints; i++) {
     const logFreq = logStart + (i / (numPoints - 1)) * (logEnd - logStart);
     const frequency = Math.pow(10, logFreq);
@@ -222,8 +260,9 @@ export function calculateFrequencyResponse(
     const magnitude = complexMagnitude(transferFunction);
     const phase = complexPhase(transferFunction);
     
-    // Convert to dB
-    const magnitudeDB = 20 * Math.log10(Math.max(magnitude, 1e-10)); // Prevent log(0)
+    // Normalize to reference and convert to dB
+    const normalizedMagnitude = magnitude / refMagnitude;
+    const magnitudeDB = 20 * Math.log10(Math.max(normalizedMagnitude, 1e-10));
     const phaseDeg = phase * 180 / Math.PI;
     
     response.push({

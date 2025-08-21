@@ -1,72 +1,80 @@
 <template>
-  <div class="bg-gray-800 p-6 rounded-lg border border-gray-600">
-    <h3 class="text-lg font-bold mb-4">Audio Processing</h3>
-    
-    <div class="space-y-4">
-      <!-- Audio Controls -->
-      <div class="flex items-center space-x-4">
-        <button 
-          @click="togglePlayback"
-          :disabled="isProcessing"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-white font-medium transition-colors"
-        >
-          {{ isPlaying ? 'Stop' : 'Play Test Tone' }}
-        </button>
-        
-        <button 
-          @click="generateTestSignal"
-          :disabled="isProcessing"
-          class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded text-white font-medium transition-colors"
-        >
-          Generate Guitar Test
-        </button>
-      </div>
-
-      <!-- Test Tone Controls -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium mb-2">Test Frequency: {{ testFrequency }}Hz</label>
-          <input 
-            v-model.number="testFrequency"
-            type="range" 
-            min="80" 
-            max="2000" 
-            step="10"
-            class="w-full"
+  <ClientOnly>
+    <div class="bg-gray-800 p-6 rounded-lg border border-gray-600">
+      <h3 class="text-lg font-bold mb-4">Audio Processing</h3>
+      
+      <div class="space-y-4">
+        <!-- Audio Controls -->
+        <div class="flex items-center space-x-4">
+          <button 
+            @click="togglePlayback"
+            :disabled="isProcessing"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded text-white font-medium transition-colors"
           >
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium mb-2">Volume: {{ Math.round(volume * 100) }}%</label>
-          <input 
-            v-model.number="volume"
-            type="range" 
-            min="0" 
-            max="1" 
-            step="0.01"
-            class="w-full"
+            {{ isPlaying ? 'Stop' : 'Play Test Tone' }}
+          </button>
+          
+          <button 
+            @click="generateTestSignal"
+            :disabled="isProcessing"
+            class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded text-white font-medium transition-colors"
           >
+            Generate Guitar Test
+          </button>
         </div>
-      </div>
 
-      <!-- Audio Canvas Visualization -->
-      <div class="bg-gray-700 rounded p-4">
-        <canvas 
-          ref="audioCanvas" 
-          width="600" 
-          height="100"
-          class="w-full h-24 bg-gray-900 rounded"
-        ></canvas>
-      </div>
+        <!-- Test Tone Controls -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Test Frequency: {{ testFrequency }}Hz</label>
+            <input 
+              v-model.number="testFrequency"
+              type="range" 
+              min="80" 
+              max="2000" 
+              step="10"
+              class="w-full"
+            >
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium mb-2">Volume: {{ Math.round(volume * 100) }}%</label>
+            <input 
+              v-model.number="volume"
+              type="range" 
+              min="0" 
+              max="1" 
+              step="0.01"
+              class="w-full"
+            >
+          </div>
+        </div>
 
-      <!-- Status -->
-      <div class="text-sm text-gray-400">
-        <p v-if="isProcessing">Processing audio...</p>
-        <p v-else-if="isPlaying">Playing test tone at {{ testFrequency }}Hz</p>
-        <p v-else>Ready to play audio</p>
+        <!-- Audio Canvas Visualization -->
+        <div class="bg-gray-700 rounded p-4">
+          <canvas 
+            ref="audioCanvas" 
+            width="600" 
+            height="100"
+            class="w-full h-24 bg-gray-900 rounded"
+          ></canvas>
+        </div>
+
+        <!-- Status -->
+        <div class="text-sm text-gray-400">
+          <p v-if="isProcessing">Processing audio...</p>
+          <p v-else-if="isPlaying">Playing test tone at {{ testFrequency }}Hz</p>
+          <p v-else>Ready to play audio</p>
+        </div>
       </div>
     </div>
-  </div>
+    <template #fallback>
+      <div class="bg-gray-800 p-6 rounded-lg border border-gray-600">
+        <h3 class="text-lg font-bold mb-4">Audio Processing</h3>
+        <div class="text-gray-400">Loading audio controls...</div>
+      </div>
+    </template>
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">
@@ -94,14 +102,20 @@ let analyser: AnalyserNode | null = null;
 let animationId: number | null = null;
 
 onMounted(() => {
-  initializeAudio();
+  if (process.client) {
+    initializeAudio();
+  }
 });
 
 onUnmounted(() => {
-  cleanup();
+  if (process.client) {
+    cleanup();
+  }
 });
 
 async function initializeAudio() {
+  if (!process.client) return;
+  
   try {
     audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     analyser = audioContext.createAnalyser();

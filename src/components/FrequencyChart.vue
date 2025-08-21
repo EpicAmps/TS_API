@@ -2,12 +2,19 @@
   <div class="bg-gray-800 p-6 rounded-lg border border-gray-600">
     <h3 class="text-lg font-bold mb-4">Frequency Response</h3>
     <div class="h-80 w-full">
-      <v-chart 
-        class="chart" 
-        :option="chartOption" 
-        :theme="'dark'"
-        autoresize
-      />
+      <ClientOnly>
+        <v-chart 
+          class="chart" 
+          :option="chartOption" 
+          :theme="'dark'"
+          autoresize
+        />
+        <template #fallback>
+          <div class="h-full flex items-center justify-center text-gray-400">
+            Loading chart...
+          </div>
+        </template>
+      </ClientOnly>
     </div>
   </div>
 </template>

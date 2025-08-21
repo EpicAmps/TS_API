@@ -2,140 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {    
-    background-color: #fbfbfb;
-  }
-
-  strong {
-    @apply font-medium;
-  }
-
-  /* @font-face {
-    font-family: 'retni-sans';
-    font-style: normal;
-    font-weight: 300;
-    src: local('Retni Sans Light'),
-         url('/fonts/RetniSans-Light.woff') format('woff');
-  } */
-
-  @font-face {
-    font-family: 'retni-sans';
-    font-style: normal;
-    font-weight: 400;
-    src: local('Retni Sans Regular'),
-         url('/fonts/RetniSans-Regular.woff') format('woff');
-  }
-
-  @font-face {
-    font-family: 'retni-sans';
-    font-style: normal;
-    font-weight: 500;
-    src: local('Retni Sans Medium'),
-         url('/fonts/RetniSans-Medium.woff') format('woff');
-  }
-
-  @font-face {
-    font-family: 'retni-sans';
-    font-style: normal;
-    font-weight: 700;
-    src: local('Retni Sans Bold'),
-         url('/fonts/RetniSans-Bold.woff') format('woff');
-  }
-
-  /* @font-face {
-    font-family: 'retni-sans';
-    font-style: italic;
-    font-weight: 300;
-    src: local('Retni Sans Light Italic'),
-         url('/fonts/RetniSans-LightItalic.woff') format('woff');
-  } */
-
-  @font-face {
-    font-family: 'retni-sans';
-    font-style: italic;
-    font-weight: 400;
-    src: local('Retni Sans Italic'),
-         url('/fonts/RetniSans-Italic.woff') format('woff');
-  }
-
-  /* @font-face {
-    font-family: 'retni-sans';
-    font-style: italic;
-    font-weight: 500;
-    src: local('Retni Sans Medium Italic'),
-         url('/fonts/RetniSans-MediumItalic.woff') format('woff');
-  }
-
-  @font-face {
-    font-family: 'retni-sans';
-    font-style: italic;
-    font-weight: 700;
-    src: local('Retni Sans Bold Italic'),
-         url('/fonts/RetniSans-BoldItalic.woff') format('woff');
-  } */
+body {
+  @apply bg-gray-900 text-white;
 }
 
-@layer components {
-  input[type="checkbox"] {
-    @apply h-5 w-5 border border-gray-500 rounded-none focus:ring-indigo-500 appearance-none;
-    @apply focus:outline-none focus:z-50 focus-visible:ring-2 ring-blue-400;
-    background-color: white;
-  }
-
-  input[type="checkbox"]:checked {
-    @apply bg-gray-700 border-gray-900;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='white' stroke-width='1.5'%3E%3Cpath d='M4 10l4 4 8-8'/%3E%3C/svg%3E");
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-  }
-
-  input[type="range"] {
-    -webkit-appearance: none;  
-    @apply h-1.5 bg-gray-100 border border-solid border-gray-700;
-    outline: none;
-  }
-  
-  input[type="range"]:hover {
-    @apply bg-gray-200 border-gray-800;
-  }
-  
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    @apply w-6 h-4 bg-gray-700 border border-solid border-gray-900 rounded-none;
-    cursor: pointer;
-  }
-  
-  .input[type="range"]::-webkit-slider-thumb:hover {
-    @apply bg-gray-900;
-  }
-  
-  input[type="range"]::-moz-range-thumb {
-    @apply w-6 h-4 bg-gray-700 border border-solid border-gray-900 rounded-none;
-    cursor: pointer;
-  }
-  
-  input[type="range"]::-moz-range-thumb:hover {
-    @apply bg-gray-900;
-  }
-
-  select {
-    @apply appearance-none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.2rem center;
-    background-size: 1em;
-  }
-  
-  select::-ms-expand {
-    display: none;
-  }
+.knob {
+  @apply w-16 h-16 rounded-full border-4 border-gray-600 bg-gray-800 relative cursor-pointer;
+  background: radial-gradient(circle at 30% 30%, #4a5568, #2d3748);
 }
 
-@layer utilities {
-  .ring-focus {
-    @apply focus:outline-none focus:z-50 focus-visible:ring-2 ring-blue-400;
-  }
+.knob::after {
+  content: '';
+  @apply absolute w-1 h-6 bg-white rounded-full;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  transform-origin: center 28px;
+}
+
+.frequency-chart {
+  @apply bg-gray-800 border border-gray-600 rounded-lg p-4;
 }

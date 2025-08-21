@@ -37,7 +37,7 @@
           <h2 class="text-xl font-bold mb-4">Controls</h2>
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium mb-2">Bass</label>
+              <label class="block text-sm font-medium mb-2">Bass: {{ Math.round(controls.bass * 100) }}%</label>
               <input 
                 v-model.number="controls.bass"
                 @input="updateFrequencyResponse"
@@ -49,7 +49,7 @@
               >
             </div>
             <div>
-              <label class="block text-sm font-medium mb-2">Mid</label>
+              <label class="block text-sm font-medium mb-2">Mid: {{ Math.round(controls.mid * 100) }}%</label>
               <input 
                 v-model.number="controls.mid"
                 @input="updateFrequencyResponse"
@@ -61,7 +61,7 @@
               >
             </div>
             <div>
-              <label class="block text-sm font-medium mb-2">Treble</label>
+              <label class="block text-sm font-medium mb-2">Treble: {{ Math.round(controls.treble * 100) }}%</label>
               <input 
                 v-model.number="controls.treble"
                 @input="updateFrequencyResponse"

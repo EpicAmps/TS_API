@@ -1,6 +1,8 @@
 export default defineNuxtConfig({
   devtools: { enabled: false },
-  css: ['~/assets/css/main.css'],
+  srcDir: 'src/',
+  css: ['assets/css/main.css'],
+  srcDir: 'src/',
   modules: ['@nuxtjs/tailwindcss'],
   nitro: {
     experimental: {

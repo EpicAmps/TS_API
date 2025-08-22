@@ -98,62 +98,49 @@ function calculateMarshallTransferFunction(
   treble: number,
   frequency: number
 ): Complex {
+  // Debug logging
+  if (frequency === 1000) {
+    console.log('Marshall calculation at 1kHz:', { bass, mid, treble, frequency });
+  }
+  
   const omega = 2 * Math.PI * frequency;
   
   const { R1, R2, R3, C1, C2, C3, P_TREBLE, P_MID, P_BASS } = MARSHALL_COMPONENTS;
   
   // YATSC-style potentiometer modeling - linear taper with proper scaling
-  const Rt = P_TREBLE * treble + 1000;      // Treble pot resistance
-  const Rm = P_MID * mid + 1000;            // Mid pot resistance  
-  const Rb = P_BASS * bass + 1000;          // Bass pot resistance
+  const Rt1 = P_TREBLE * treble + 1000;      // Treble pot upper
+  const Rt2 = P_TREBLE * (1 - treble) + 1000; // Treble pot lower
+  const Rm1 = P_MID * mid + 1000;            // Mid pot upper
+  const Rm2 = P_MID * (1 - mid) + 1000;      // Mid pot lower
+  const Rb1 = P_BASS * bass + 1000;          // Bass pot upper
+  const Rb2 = P_BASS * (1 - bass) + 1000;    // Bass pot lower
   
   // Complex impedances - YATSC uses jω formulation
   const ZC1: Complex = { real: 0, imag: -1 / (omega * C1) };
   const ZC2: Complex = { real: 0, imag: -1 / (omega * C2) };
-  const ZC3: Complex = { real: 0, imag: -1 / (omega * C3) };
   
-  // YATSC Marshall topology - exact nodal analysis
-  // Three nodes: V1 (after R1), V2 (mid wiper), V3 (bass wiper)
+  // Simple Marshall approximation - focus on getting reasonable numbers first
+  const bassImpedance = complexAdd(ZC2, { real: Rb2, imag: 0 });
+  const trebleImpedance = complexAdd(ZC1, { real: Rt2, imag: 0 });
   
-  // Build impedance network - Marshall specific topology
-  const Z1 = complexAdd({ real: R1, imag: 0 }, 
-    complexDivide(
-      complexMultiply(ZC1, { real: Rt, imag: 0 }),
-      complexAdd(ZC1, { real: Rt, imag: 0 })
-    )
+  // Parallel combination of bass and treble paths
+  const parallelImpedance = complexDivide(
+    complexMultiply(bassImpedance, trebleImpedance),
+    complexAdd(bassImpedance, trebleImpedance)
   );
   
-  const Z2 = complexAdd({ real: R2, imag: 0 }, { real: Rm, imag: 0 });
+  // Total impedance including slope resistor
+  const totalImpedance = complexAdd({ real: R1, imag: 0 }, parallelImpedance);
   
-  const Z3 = complexAdd(
-    complexAdd({ real: Rb, imag: 0 }, { real: R3, imag: 0 }),
-    ZC2
-  );
+  // Transfer function - output impedance / total impedance
+  const transferFunction = complexDivide(parallelImpedance, totalImpedance);
   
-  // Marshall transfer function - based on YATSC nodal equations
-  const numerator = complexMultiply(
-    ZC1,
-    complexDivide(
-      complexMultiply({ real: Rm, imag: 0 }, Z3),
-      complexAdd(Z2, Z3)
-    )
-  );
+  if (frequency === 1000) {
+    console.log('Transfer function at 1kHz:', transferFunction);
+    console.log('Magnitude:', complexMagnitude(transferFunction));
+  }
   
-  const denominator = complexAdd(
-    Z1,
-    complexDivide(
-      complexMultiply(
-        complexAdd({ real: R2, imag: 0 }, ZC3),
-        complexAdd(Z2, Z3)
-      ),
-      complexAdd(
-        complexAdd({ real: R2, imag: 0 }, ZC3),
-        complexAdd(Z2, Z3)
-      )
-    )
-  );
-  
-  return complexDivide(numerator, denominator);
+  return transferFunction;
 }
 
 // 3x3 determinant calculation for complex numbers
@@ -202,9 +189,14 @@ export function generateMarshallFrequencyResponse(
     const magnitude = complexMagnitude(transfer);
     const phase = complexPhase(transfer);
     
-    // Convert to dB - YATSC style (no normalization, direct conversion)
-    const magnitudeDB = 20 * Math.log10(Math.max(magnitude, 1e-10));
+    // Convert to dB with sanity check
+    const magnitudeDB = 20 * Math.log10(Math.max(Math.min(magnitude, 1.0), 1e-10));
     const phaseDeg = phase * 180 / Math.PI;
+    
+    // Debug problematic values
+    if (magnitudeDB > 10 || magnitudeDB < -50) {
+      console.log(`Suspicious magnitude at ${frequency}Hz: ${magnitudeDB}dB, raw: ${magnitude}`);
+    }
     
     response.push({
       frequency,

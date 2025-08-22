@@ -79,8 +79,7 @@
 
 <script setup lang="ts">
 const props = defineProps<{
-  toneStackId?: string;
-  controls?: Record<string, number>;
+  marshallPreset?: string;
 }>();
 
 const emit = defineEmits<{
@@ -233,15 +232,8 @@ async function generateTestSignal() {
   isProcessing.value = true;
   
   try {
-    // Simulate processing with tone stack
-    const response = await $fetch('/api/audio/analyze', {
-      method: 'POST',
-      body: {
-        toneStackId: props.toneStackId || 'fender-tmb',
-        controls: props.controls || { bass: 0.5, mid: 0.5, treble: 0.5 },
-        sampleRate: 44100
-      }
-    });
+    // Get Marshall preset data
+    const response = await $fetch(`/api/marshall/${props.marshallPreset || 'marshall-noon'}`);
     
     if (response.success) {
       emit('audioProcessed', {

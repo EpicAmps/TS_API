@@ -16,61 +16,47 @@
           <h2 class="text-xl font-bold mb-4">Tone Stack Selection</h2>
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium mb-2">Select Tone Stack:</label>
+              <label class="block text-sm font-medium mb-2">Select Marshall Preset:</label>
               <select 
-                v-model="selectedToneStack"
-                @change="updateFrequencyResponse"
+                v-model="selectedMarshallPreset"
+                @change="updateMarshallResponse"
                 class="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
               >
-                <option value="fender-tmb">Fender TMB</option>
-                <option value="marshall-jcm800">Marshall JCM800</option>
-                <option value="vox-ac30">Vox AC30</option>
-                <option value="boneyard-ray">Boneyard Ray</option>
-                <option value="rat-distortion">RAT Distortion</option>
+                <option value="marshall-noon">All Knobs at Noon</option>
+                <option value="marshall-modern">Modern Rock (B:10, M:11, T:1)</option>
+                <option value="marshall-scooped">Scooped (B:9, M:3, T:Noon)</option>
+                <option value="marshall-dimed">All Knobs Dimed</option>
               </select>
+            </div>
+            <div v-if="currentPreset" class="text-sm text-gray-400">
+              <p><strong>{{ currentPreset.name }}</strong></p>
+              <p>{{ currentPreset.description }}</p>
+              <p>Bass: {{ Math.round(currentPreset.settings.bass * 10) }}, 
+                 Mid: {{ Math.round(currentPreset.settings.mid * 10) }}, 
+                 Treble: {{ Math.round(currentPreset.settings.treble * 10) }}</p>
             </div>
           </div>
         </div>
 
-        <!-- Controls -->
+        <!-- Marshall Component Info -->
         <div class="bg-gray-800 p-6 rounded-lg border border-gray-600">
-          <h2 class="text-xl font-bold mb-4">Controls</h2>
-          <div class="space-y-4">
+          <h2 class="text-xl font-bold mb-4">Marshall JCM800 Components</h2>
+          <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <label class="block text-sm font-medium mb-2">Bass: {{ Math.round(controls.bass * 100) }}%</label>
-              <input 
-                v-model.number="controls.bass"
-                @input="updateFrequencyResponse"
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.01" 
-                class="w-full"
-              >
+              <h3 class="font-semibold text-gray-300 mb-2">Resistors</h3>
+              <ul class="space-y-1 text-gray-400">
+                <li>R1: 33kΩ (slope)</li>
+                <li>R2: 4.7kΩ (mid)</li>
+                <li>R3: 82kΩ (bass load)</li>
+              </ul>
             </div>
             <div>
-              <label class="block text-sm font-medium mb-2">Mid: {{ Math.round(controls.mid * 100) }}%</label>
-              <input 
-                v-model.number="controls.mid"
-                @input="updateFrequencyResponse"
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.01" 
-                class="w-full"
-              >
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">Treble: {{ Math.round(controls.treble * 100) }}%</label>
-              <input 
-                v-model.number="controls.treble"
-                @input="updateFrequencyResponse"
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.01" 
-                class="w-full"
-              >
+              <h3 class="font-semibold text-gray-300 mb-2">Capacitors</h3>
+              <ul class="space-y-1 text-gray-400">
+                <li>C1: 220pF (treble)</li>
+                <li>C2: 22nF (bass)</li>
+                <li>C3: 220pF (slope)</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -83,8 +69,7 @@
         <!-- Audio Player -->
         <div class="lg:col-span-2">
           <AudioPlayer 
-            :tone-stack-id="selectedToneStack"
-            :controls="controls"
+            :marshall-preset="selectedMarshallPreset"
             @audio-processed="handleAudioProcessed"
           />
         </div>
@@ -95,31 +80,21 @@
 
 <script setup lang="ts">
 // Reactive state
-const selectedToneStack = ref('fender-tmb');
-const controls = reactive({
-  bass: 0.5,
-  mid: 0.5,
-  treble: 0.5
-});
+const selectedMarshallPreset = ref('marshall-noon');
 const frequencyData = ref<Array<{ frequency: number; magnitude: number; phase: number }>>([]);
+const currentPreset = ref<any>(null);
 
-// Update frequency response when controls change
-async function updateFrequencyResponse() {
+// Update Marshall frequency response
+async function updateMarshallResponse() {
   try {
-    const response = await $fetch('/api/audio/analyze', {
-      method: 'POST',
-      body: {
-        toneStackId: selectedToneStack.value,
-        controls: controls,
-        sampleRate: 44100
-      }
-    });
+    const response = await $fetch(`/api/marshall/${selectedMarshallPreset.value}`);
     
     if (response.success) {
       frequencyData.value = response.data.frequencyResponse;
+      currentPreset.value = response.data.preset;
     }
   } catch (error) {
-    console.error('Failed to update frequency response:', error);
+    console.error('Failed to update Marshall response:', error);
   }
 }
 
@@ -130,11 +105,11 @@ function handleAudioProcessed(data: { frequencyResponse: any[]; processedAudio: 
 
 // Initialize on mount
 onMounted(() => {
-  updateFrequencyResponse();
+  updateMarshallResponse();
 });
 
 // Set page title
 useHead({
-  title: 'Yet Another Tonestack Calculator - Guitar Tone Stack Analysis'
+  title: 'Marshall JCM800 Tone Stack Analysis - YATSC Implementation'
 });
 </script>

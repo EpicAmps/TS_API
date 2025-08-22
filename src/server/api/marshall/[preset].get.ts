@@ -1,4 +1,14 @@
-import { generateMarshallFrequencyResponse, getMarshallPreset } from '~/utils/marshall-presets';
+import { 
+  MARSHALL_NOON_CURVE,
+  MARSHALL_MODERN_CURVE, 
+  MARSHALL_SCOOPED_CURVE,
+  MARSHALL_DIMED_CURVE,
+  getYATSCFrequencyResponse,
+  createMarshallNoonFilter,
+  createMarshallModernFilter,
+  createMarshallScoopedFilter,
+  createMarshallDimedFilter
+} from '~/utils/yatsc-curves';
 
 export default defineEventHandler(async (event) => {
   const presetId = getRouterParam(event, 'preset');
@@ -11,23 +21,65 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const preset = getMarshallPreset(presetId);
+    let frequencyResponse;
+    let filterCoefficients;
+    let presetInfo;
     
-    if (!preset) {
+    switch (presetId) {
+      case 'marshall-noon':
+        frequencyResponse = getYATSCFrequencyResponse(MARSHALL_NOON_CURVE);
+        filterCoefficients = createMarshallNoonFilter();
+        presetInfo = {
+          name: 'All Knobs at Noon',
+          description: 'Classic Marshall sound with all controls at 12 o\'clock',
+          settings: 'Bass: 5, Mid: 5, Treble: 5'
+        };
+        break;
+        
+      case 'marshall-modern':
+        frequencyResponse = getYATSCFrequencyResponse(MARSHALL_MODERN_CURVE);
+        filterCoefficients = createMarshallModernFilter();
+        presetInfo = {
+          name: 'Modern Rock',
+          description: 'Tight low end, focused mids, bright treble',
+          settings: 'Bass: 10, Mid: 11, Treble: 1'
+        };
+        break;
+        
+      case 'marshall-scooped':
+        frequencyResponse = getYATSCFrequencyResponse(MARSHALL_SCOOPED_CURVE);
+        filterCoefficients = createMarshallScoopedFilter();
+        presetInfo = {
+          name: 'Scooped',
+          description: 'Classic scooped midrange sound',
+          settings: 'Bass: 9, Mid: 3, Treble: Noon'
+        };
+        break;
+        
+      case 'marshall-dimed':
+        frequencyResponse = getYATSCFrequencyResponse(MARSHALL_DIMED_CURVE);
+        filterCoefficients = createMarshallDimedFilter();
+        presetInfo = {
+          name: 'All Knobs Dimed',
+          description: 'Maximum settings - aggressive and bright',
+          settings: 'Bass: 10, Mid: 10, Treble: 10'
+        };
+        break;
+        
+      default:
       throw createError({
         statusCode: 404,
-        statusMessage: `Marshall preset not found: ${presetId}`
+        statusMessage: `Marshall preset not found: ${presetId}. Available: marshall-noon, marshall-modern, marshall-scooped, marshall-dimed`
       });
     }
 
-    // Generate frequency response
-    const frequencyResponse = generateMarshallFrequencyResponse(presetId);
 
     return {
       success: true,
       data: {
-        preset,
+        preset: presetInfo,
         frequencyResponse,
+        filterCoefficients,
         metadata: {
           componentValues: {
             R1: '33kΩ (slope)',

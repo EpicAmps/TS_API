@@ -124,7 +124,16 @@ export function calculateFenderTMBResponse(
 }
 
 // High frequency response (treble control effect)
-export function calculateHighFreqGain(omega: number, C1: number, Rt1: number, R1: number): ComplexNumber {
+export function calculateHighFreqResponse(
+  treble: number,
+  frequency: number,
+  R1: number,
+  C1: number
+): ComplexNumber {
+  const omega = 2 * Math.PI * frequency;
+  const Ptreble = 250000;
+  const Rt1 = Ptreble * treble;
+  
   return complexDivide(
     { real: 1, imag: 0 },
     complexAdd(
@@ -138,7 +147,16 @@ export function calculateHighFreqGain(omega: number, C1: number, Rt1: number, R1
 }
 
 // Low frequency response (bass control effect)
-export function calculateLowFreqGain(omega: number, C2: number, Rb1: number, R3: number): ComplexNumber {
+export function calculateLowFreqResponse(
+  bass: number,
+  frequency: number,
+  R3: number,
+  C2: number
+): ComplexNumber {
+  const omega = 2 * Math.PI * frequency;
+  const Pbass = 250000;
+  const Rb1 = Pbass * bass;
+  
   return complexDivide(
     complexMultiply({ real: omega * C2 * Rb1, imag: 0 }, { real: 0, imag: 1 }),
     complexAdd(
@@ -152,15 +170,38 @@ export function calculateLowFreqGain(omega: number, C2: number, Rb1: number, R3:
 }
 
 // Mid frequency response (mid control effect)
-export function calculateMidFreqGain(Rm1: number, Rm2: number, R2: number): ComplexNumber {
+export function calculateMidFreqResponse(
+  mid: number,
+  R2: number
+): ComplexNumber {
+  const Pmid = 25000;
+  const Rm1 = Pmid * mid;
+  const Rm2 = Pmid * (1 - mid);
+  
   return complexDivide(
     { real: Rm1, imag: 0 },
     { real: Rm1 + Rm2 + R2, imag: 0 }
   );
 }
 
-// Combine all frequency responses
-export function calculateTotalGain(highFreqGain: ComplexNumber, lowFreqGain: ComplexNumber, midFreqGain: ComplexNumber): ComplexNumber {
+// Complete Fender response calculation
+export function calculateCompleteFenderResponse(
+  treble: number,
+  bass: number,
+  mid: number,
+  frequency: number
+): ComplexNumber {
+  const R1 = 56000;
+  const R2 = 6800;
+  const R3 = 100000;
+  const C1 = 250e-12;
+  const C2 = 22e-9;
+  
+  const highFreqGain = calculateHighFreqResponse(treble, frequency, R1, C1);
+  const lowFreqGain = calculateLowFreqResponse(bass, frequency, R3, C2);
+  const midFreqGain = calculateMidFreqResponse(mid, R2);
+  
+  // Combine all frequency responses
   const totalGain = complexMultiply(
     complexMultiply(highFreqGain, lowFreqGain),
     midFreqGain
@@ -311,12 +352,9 @@ export function calculateFrequencyResponse(
   const logStart = Math.log10(startFreq);
   const logEnd = Math.log10(endFreq);
   
-  // Calculate reference magnitude at 1kHz for normalization (like YATSC)
-  const refResponse = calculateToneStackResponse(toneStackId, params, 1000);
-  const refMagnitude = complexMagnitude(refResponse);
-  
-  // Ensure we don't divide by zero
-  const normalizedRefMagnitude = refMagnitude > 1e-10 ? refMagnitude : 1e-10;
+  // Calculate reference magnitude at 1kHz for normalization
+  const refTransferFunction = calculateToneStackResponse(toneStackId, params, 1000);
+  const refMagnitude = complexMagnitude(refTransferFunction);
   
   for (let i = 0; i < numPoints; i++) {
     const logFreq = logStart + (i / (numPoints - 1)) * (logEnd - logStart);
@@ -326,8 +364,8 @@ export function calculateFrequencyResponse(
     const magnitude = complexMagnitude(transferFunction);
     const phase = complexPhase(transferFunction);
     
-    // Convert to dB relative to 1kHz reference (YATSC style)
-    const magnitudeDB = 20 * Math.log10(Math.max(magnitude / normalizedRefMagnitude, 1e-10));
+    // Convert to dB relative to reference
+    const magnitudeDB = 20 * Math.log10(Math.max(magnitude / refMagnitude, 1e-10));
     const phaseDeg = phase * 180 / Math.PI;
     
     response.push({

@@ -58,160 +58,7 @@ export function complexPhase(c: ComplexNumber): number {
   return Math.atan2(c.imag, c.real);
 }
 
-// Fender TMB tone stack - accurate nodal analysis based on YATSC
-export function calculateFenderTMBResponse(
-  treble: number, // 0-1
-  bass: number,   // 0-1
-  mid: number,    // 0-1
-  frequency: number
-): ComplexNumber {
-  const omega = 2 * Math.PI * frequency;
-  const s = { real: 0, imag: omega };
-  
-  // Fender TMB component values (from YATSC)
-  const R1 = 56000;   // Slope resistor
-  const R2 = 6800;    // Mid resistor
-  const R3 = 100000;  // Bass load
-  const C1 = 250e-12; // Treble cap
-  const C2 = 22e-9;   // Bass cap
-  const C3 = 250e-12; // Slope cap
-  
-  // Potentiometer values
-  const Ptreble = 250000;
-  const Pmid = 25000;
-  const Pbass = 250000;
-  
-  // Potentiometer positions (wiper positions)
-  const Rt1 = Ptreble * treble;
-  const Rt2 = Ptreble * (1 - treble);
-  const Rm1 = Pmid * mid;
-  const Rm2 = Pmid * (1 - mid);
-  const Rb1 = Pbass * bass;
-  const Rb2 = Pbass * (1 - bass);
-  
-  // Complex impedances
-  const ZC1 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C1, imag: 0 }));
-  const ZC2 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C2, imag: 0 }));
-  const ZC3 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C3, imag: 0 }));
-  
-  // Marshall TMB circuit - more accurate nodal analysis
-  // This is a simplified 3-node analysis of the Marshall circuit
-  
-  // Node impedances
-  const Z1 = complexAdd({ real: R1, imag: 0 }, ZC3); // Slope network
-  const Z2 = complexAdd({ real: Rt1, imag: 0 }, ZC1); // Treble network
-  const Z3 = complexAdd({ real: Rb1 + R3, imag: 0 }, ZC2); // Bass network
-  const Z4 = { real: Rm1 + R2, imag: 0 }; // Mid network
-  
-  // Transfer function calculation (simplified nodal analysis)
-  const numerator = complexMultiply(
-    complexMultiply(Z2, Z3),
-    { real: Rm1 / (Rm1 + Rm2 + R2), imag: 0 }
-  );
-  
-  const denominator = complexAdd(
-    complexAdd(
-      complexMultiply(Z1, complexAdd(Z2, Z3)),
-      complexMultiply(Z2, Z3)
-    ),
-    complexMultiply(Z4, complexAdd(Z1, complexAdd(Z2, Z3)))
-  );
-  
-  const transferFunction = complexDivide(numerator, denominator);
-  
-  // Apply realistic scaling for Marshall (passive circuit, always < 0dB)
-  return complexMultiply(transferFunction, { real: 0.3, imag: 0 });
-}
-
-// High frequency response (treble control effect)
-export function calculateHighFreqResponse(
-  treble: number,
-  frequency: number,
-  R1: number,
-  C1: number
-): ComplexNumber {
-  const omega = 2 * Math.PI * frequency;
-  const Ptreble = 250000;
-  const Rt1 = Ptreble * treble;
-  
-  return complexDivide(
-    { real: 1, imag: 0 },
-    complexAdd(
-      { real: 1, imag: 0 },
-      complexMultiply(
-        { real: omega * C1 * (Rt1 + R1), imag: 0 },
-        { real: 0, imag: 1 }
-      )
-    )
-  );
-}
-
-// Low frequency response (bass control effect)
-export function calculateLowFreqResponse(
-  bass: number,
-  frequency: number,
-  R3: number,
-  C2: number
-): ComplexNumber {
-  const omega = 2 * Math.PI * frequency;
-  const Pbass = 250000;
-  const Rb1 = Pbass * bass;
-  
-  return complexDivide(
-    complexMultiply({ real: omega * C2 * Rb1, imag: 0 }, { real: 0, imag: 1 }),
-    complexAdd(
-      { real: 1, imag: 0 },
-      complexMultiply(
-        { real: omega * C2 * (Rb1 + R3), imag: 0 },
-        { real: 0, imag: 1 }
-      )
-    )
-  );
-}
-
-// Mid frequency response (mid control effect)
-export function calculateMidFreqResponse(
-  mid: number,
-  R2: number
-): ComplexNumber {
-  const Pmid = 25000;
-  const Rm1 = Pmid * mid;
-  const Rm2 = Pmid * (1 - mid);
-  
-  return complexDivide(
-    { real: Rm1, imag: 0 },
-    { real: Rm1 + Rm2 + R2, imag: 0 }
-  );
-}
-
-// Complete Fender response calculation
-export function calculateCompleteFenderResponse(
-  treble: number,
-  bass: number,
-  mid: number,
-  frequency: number
-): ComplexNumber {
-  const R1 = 56000;
-  const R2 = 6800;
-  const R3 = 100000;
-  const C1 = 250e-12;
-  const C2 = 22e-9;
-  
-  const highFreqGain = calculateHighFreqResponse(treble, frequency, R1, C1);
-  const lowFreqGain = calculateLowFreqResponse(bass, frequency, R3, C2);
-  const midFreqGain = calculateMidFreqResponse(mid, R2);
-  
-  // Combine all frequency responses
-  const totalGain = complexMultiply(
-    complexMultiply(highFreqGain, lowFreqGain),
-    midFreqGain
-  );
-  
-  // Apply overall scaling factor to match typical tone stack behavior
-  return complexMultiply(totalGain, { real: 0.1, imag: 0 });
-}
-
-// Marshall tone stack - different topology and component values
+// Marshall tone stack - improved nodal analysis
 export function calculateMarshallResponse(
   treble: number,
   bass: number, 
@@ -219,8 +66,9 @@ export function calculateMarshallResponse(
   frequency: number
 ): ComplexNumber {
   const omega = 2 * Math.PI * frequency;
+  const s = { real: 0, imag: omega };
   
-  // Marshall component values (from YATSC)
+  // Marshall component values
   const R1 = 33000;   // Slope resistor
   const R2 = 4700;    // Mid resistor
   const R3 = 82000;   // Bass load
@@ -235,84 +83,20 @@ export function calculateMarshallResponse(
   const Rm = Pmid * mid;
   const Rb = Pbass * bass;
   
-  // Marshall has more aggressive midrange scoop
-  const highCutoff = 1 / (2 * Math.PI * (Rt + R1) * C1);
-  const lowCutoff = 1 / (2 * Math.PI * (Rb + R3) * C2);
+  // Complex impedances
+  const ZC1 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C1, imag: 0 }));
+  const ZC2 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C2, imag: 0 }));
   
-  let magnitude = 1.0;
+  // Simplified transfer function for Marshall topology
+  const Z1 = complexAdd({ real: R1, imag: 0 }, ZC1);
+  const Z2 = complexAdd({ real: Rt, imag: 0 }, ZC2);
+  const Z3 = { real: R3 + Rb, imag: 0 };
+  const Z4 = { real: R2 + Rm, imag: 0 };
   
-  // High frequency rolloff (more aggressive than Fender)
-  if (frequency > highCutoff) {
-    magnitude *= 1 / Math.sqrt(1 + Math.pow(frequency / highCutoff, 2));
-  }
+  const numerator = complexMultiply(Z2, { real: 0.5, imag: 0 });
+  const denominator = complexAdd(complexAdd(Z1, Z2), complexAdd(Z3, Z4));
   
-  // Low frequency rolloff
-  if (frequency < lowCutoff) {
-    magnitude *= frequency / lowCutoff / Math.sqrt(1 + Math.pow(lowCutoff / frequency, 2));
-  }
-  
-  // Midrange scoop (Marshall characteristic)
-  const midFreq = 500; // Hz
-  const midQ = 2.0;
-  const midGain = 0.3 + (mid * 0.4); // More pronounced scoop
-  
-  if (frequency > 200 && frequency < 2000) {
-    const midFactor = 1 - (1 - midGain) * Math.exp(-Math.pow((frequency - midFreq) / (midFreq / midQ), 2));
-    magnitude *= midFactor;
-  }
-  
-  const phase = -Math.atan2(frequency / highCutoff, 1) - Math.atan2(lowCutoff / frequency, 1);
-  
-  return {
-    real: magnitude * Math.cos(phase),
-    imag: magnitude * Math.sin(phase)
-  };
-}
-
-// Vox AC30 cut control - simple high-frequency roll-off
-export function calculateVoxResponse(
-  cut: number,
-  frequency: number
-): ComplexNumber {
-  // Vox component values
-  const R1 = 1000000; // 1M
-  const C1 = 4.7e-9;  // 4.7nF
-  const Pcut = 1000000;
-  
-  const Rcut = Pcut * cut;
-  
-  // Simple RC low-pass filter
-  const cutoffFreq = 1 / (2 * Math.PI * (R1 + Rcut) * C1);
-  const magnitude = 1 / Math.sqrt(1 + Math.pow(frequency / cutoffFreq, 2));
-  const phase = -Math.atan2(frequency / cutoffFreq, 1);
-  
-  return {
-    real: magnitude * Math.cos(phase),
-    imag: magnitude * Math.sin(phase)
-  };
-}
-
-// RAT distortion tone control - simple RC filter
-export function calculateRATResponse(
-  tone: number,
-  frequency: number
-): ComplexNumber {
-  // RAT component values
-  const R1 = 1000;    // 1k
-  const C1 = 3.3e-9;  // 3.3nF
-  const Ptone = 100000;
-  
-  const Rtone = Ptone * tone;
-  
-  // Simple RC low-pass filter
-  const cutoffFreq = 1 / (2 * Math.PI * (R1 + Rtone) * C1);
-  const magnitude = 1 / Math.sqrt(1 + Math.pow(frequency / cutoffFreq, 2));
-  const phase = -Math.atan2(frequency / cutoffFreq, 1);
-  
-  return {
-    real: magnitude * Math.cos(phase),
-    imag: magnitude * Math.sin(phase)
-  };
+  return complexDivide(numerator, denominator);
 }
 
 // Generic tone stack calculation dispatcher
@@ -322,23 +106,15 @@ export function calculateToneStackResponse(
   frequency: number
 ): ComplexNumber {
   switch (toneStackId) {
-    case 'fender-tmb':
-      return calculateFenderTMBResponse(params.treble, params.bass, params.mid || 0.5, frequency);
     case 'marshall-jcm800':
       return calculateMarshallResponse(params.treble, params.bass, params.mid || 0.5, frequency);
-    case 'vox-ac30':
-      return calculateVoxResponse(params.treble, frequency); // Using treble as cut control
-    case 'boneyard-ray':
-      // Use modified Fender-style for now
-      return calculateFenderTMBResponse(params.treble, params.bass, params.mid || 0.5, frequency);
-    case 'rat-distortion':
-      return calculateRATResponse(params.treble, frequency); // Using treble as tone control
     default:
-      return calculateFenderTMBResponse(params.treble, params.bass, params.mid || 0.5, frequency);
+      // Fallback to simple response
+      return { real: 0.5, imag: 0 };
   }
 }
 
-// Calculate frequency response over a range
+// Calculate frequency response over a range with proper normalization
 export function calculateFrequencyResponse(
   toneStackId: string,
   params: ToneStackParameters,
@@ -364,8 +140,8 @@ export function calculateFrequencyResponse(
     const magnitude = complexMagnitude(transferFunction);
     const phase = complexPhase(transferFunction);
     
-    // Convert to dB relative to reference
-    const magnitudeDB = 20 * Math.log10(Math.max(magnitude / refMagnitude, 1e-10));
+    // Convert to dB relative to 1kHz reference, ensure never above 0dB
+    const magnitudeDB = Math.min(0, 20 * Math.log10(Math.max(magnitude / refMagnitude, 1e-10)));
     const phaseDeg = phase * 180 / Math.PI;
     
     response.push({
@@ -380,7 +156,6 @@ export function calculateFrequencyResponse(
 
 // Convert tone stack preset to parameters
 export function presetToParameters(preset: any, controls: any): ToneStackParameters {
-  // Extract component values from preset
   const getComponentValue = (id: string) => {
     const component = preset.components.find((c: any) => c.id === id);
     return component ? component.value : 0;

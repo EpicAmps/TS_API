@@ -94,32 +94,33 @@ export function calculateFenderTMBResponse(
   const ZC2 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C2, imag: 0 }));
   const ZC3 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C3, imag: 0 }));
   
-  // Nodal analysis - simplified 3-node system
-  // Node 1: Input side of treble pot
-  // Node 2: Output (between treble and bass pots)
-  // Node 3: Bass pot wiper
+  // Marshall TMB circuit - more accurate nodal analysis
+  // This is a simplified 3-node analysis of the Marshall circuit
   
-  // Admittances (1/Z)
-  const Y1 = complexDivide({ real: 1, imag: 0 }, { real: R1, imag: 0 });
-  const Y2 = complexDivide({ real: 1, imag: 0 }, { real: R2, imag: 0 });
-  const Y3 = complexDivide({ real: 1, imag: 0 }, { real: R3, imag: 0 });
-  const YC1 = complexDivide({ real: 1, imag: 0 }, ZC1);
-  const YC2 = complexDivide({ real: 1, imag: 0 }, ZC2);
-  const YC3 = complexDivide({ real: 1, imag: 0 }, ZC3);
-  const YRt1 = complexDivide({ real: 1, imag: 0 }, { real: Rt1 || 1, imag: 0 });
-  const YRt2 = complexDivide({ real: 1, imag: 0 }, { real: Rt2 || 1, imag: 0 });
-  const YRm1 = complexDivide({ real: 1, imag: 0 }, { real: Rm1 || 1, imag: 0 });
-  const YRm2 = complexDivide({ real: 1, imag: 0 }, { real: Rm2 || 1, imag: 0 });
-  const YRb1 = complexDivide({ real: 1, imag: 0 }, { real: Rb1 || 1, imag: 0 });
-  const YRb2 = complexDivide({ real: 1, imag: 0 }, { real: Rb2 || 1, imag: 0 });
+  // Node impedances
+  const Z1 = complexAdd({ real: R1, imag: 0 }, ZC3); // Slope network
+  const Z2 = complexAdd({ real: Rt1, imag: 0 }, ZC1); // Treble network
+  const Z3 = complexAdd({ real: Rb1 + R3, imag: 0 }, ZC2); // Bass network
+  const Z4 = { real: Rm1 + R2, imag: 0 }; // Mid network
   
-  // Simplified transfer function calculation
-  // This is a basic approximation of the full nodal analysis
+  // Transfer function calculation (simplified nodal analysis)
+  const numerator = complexMultiply(
+    complexMultiply(Z2, Z3),
+    { real: Rm1 / (Rm1 + Rm2 + R2), imag: 0 }
+  );
   
-  // High frequency response (treble control effect)
-  const highFreqGain = complexDivide(
-    { real: 1, imag: 0 },
+  const denominator = complexAdd(
     complexAdd(
+      complexMultiply(Z1, complexAdd(Z2, Z3)),
+      complexMultiply(Z2, Z3)
+    ),
+    complexMultiply(Z4, complexAdd(Z1, complexAdd(Z2, Z3)))
+  );
+  
+  const transferFunction = complexDivide(numerator, denominator);
+  
+  // Apply realistic scaling for Marshall (passive circuit, always < 0dB)
+  return complexMultiply(transferFunction, { real: 0.3, imag: 0 });
       { real: 1, imag: 0 },
       complexMultiply(
         { real: omega * C1 * (Rt1 + R1), imag: 0 },
@@ -297,9 +298,12 @@ export function calculateFrequencyResponse(
   const logStart = Math.log10(startFreq);
   const logEnd = Math.log10(endFreq);
   
-  // Calculate reference magnitude at 1kHz for normalization
-  const refTransferFunction = calculateToneStackResponse(toneStackId, params, 1000);
-  const refMagnitude = complexMagnitude(refTransferFunction);
+  // Calculate reference magnitude at 1kHz for normalization (like YATSC)
+  const refResponse = calculateToneStackResponse(toneStackId, params, 1000);
+  const refMagnitude = complexMagnitude(refResponse);
+  
+  // Ensure we don't divide by zero
+  const normalizedRefMagnitude = refMagnitude > 1e-10 ? refMagnitude : 1e-10;
   
   for (let i = 0; i < numPoints; i++) {
     const logFreq = logStart + (i / (numPoints - 1)) * (logEnd - logStart);
@@ -309,8 +313,8 @@ export function calculateFrequencyResponse(
     const magnitude = complexMagnitude(transferFunction);
     const phase = complexPhase(transferFunction);
     
-    // Convert to dB relative to reference
-    const magnitudeDB = 20 * Math.log10(Math.max(magnitude / refMagnitude, 1e-10));
+    // Convert to dB relative to 1kHz reference (YATSC style)
+    const magnitudeDB = 20 * Math.log10(Math.max(magnitude / normalizedRefMagnitude, 1e-10));
     const phaseDeg = phase * 180 / Math.PI;
     
     response.push({

@@ -9,44 +9,48 @@ export interface YATSCCurvePoint {
 
 // Marshall JCM800 "All knobs at noon" - sampled from YATSC
 export const MARSHALL_NOON_CURVE: YATSCCurvePoint[] = [
-  { frequency: 10, magnitude: -45, phase: -90 },
-  { frequency: 20, magnitude: -38, phase: -85 },
-  { frequency: 50, magnitude: -28, phase: -70 },
-  { frequency: 100, magnitude: -20, phase: -50 },
-  { frequency: 200, magnitude: -14, phase: -30 },
-  { frequency: 400, magnitude: -10, phase: -15 },
-  { frequency: 600, magnitude: -8.5, phase: -8 },
-  { frequency: 800, magnitude: -8, phase: -5 },
-  { frequency: 1000, magnitude: -7.8, phase: -2 },
-  { frequency: 1200, magnitude: -8.2, phase: 0 },  // Slight mid dip
-  { frequency: 1500, magnitude: -7.5, phase: 2 },
-  { frequency: 2000, magnitude: -6.8, phase: 5 },
-  { frequency: 3000, magnitude: -5.5, phase: 8 },
-  { frequency: 4000, magnitude: -4.8, phase: 10 },
-  { frequency: 5000, magnitude: -4.2, phase: 12 },
-  { frequency: 8000, magnitude: -3.5, phase: 15 },
-  { frequency: 10000, magnitude: -3.2, phase: 18 },
-  { frequency: 15000, magnitude: -2.8, phase: 22 },
-  { frequency: 20000, magnitude: -2.5, phase: 25 }
+  { frequency: 10, magnitude: -18, phase: -90 },
+  { frequency: 20, magnitude: -16, phase: -85 },
+  { frequency: 30, magnitude: -14, phase: -80 },
+  { frequency: 50, magnitude: -10, phase: -70 },
+  { frequency: 80, magnitude: -7, phase: -60 },
+  { frequency: 100, magnitude: -6, phase: -50 },
+  { frequency: 150, magnitude: -6.5, phase: -40 },
+  { frequency: 200, magnitude: -7, phase: -30 },
+  { frequency: 300, magnitude: -7.5, phase: -20 },
+  { frequency: 500, magnitude: -8.5, phase: -10 },
+  { frequency: 740, magnitude: -10, phase: -5 },  // The characteristic dip
+  { frequency: 1000, magnitude: -9, phase: 0 },
+  { frequency: 1500, magnitude: -7.5, phase: 5 },
+  { frequency: 2000, magnitude: -6.8, phase: 8 },
+  { frequency: 3000, magnitude: -6.2, phase: 12 },
+  { frequency: 5000, magnitude: -5.8, phase: 15 },
+  { frequency: 8000, magnitude: -5.5, phase: 18 },
+  { frequency: 10000, magnitude: -5.8, phase: 20 },
+  { frequency: 15000, magnitude: -6, phase: 22 },
+  { frequency: 20000, magnitude: -6.2, phase: 25 }
 ];
 
 // Create BiQuad coefficients that approximate the YATSC curve
 export function createMarshallNoonFilter(sampleRate: number = 44100) {
-  // Marshall "noon" characteristic:
-  // 1. Strong bass rolloff below 100Hz
-  // 2. Slight mid dip around 1.2kHz  
-  // 3. Gentle treble rise above 2kHz
-  // 4. Overall attenuation (passive circuit)
+  // Marshall "noon" characteristic based on YATSC:
+  // 1. Bass hump around 100Hz, then rolloff below
+  // 2. Sharp mid dip at 740Hz (-10dB)
+  // 3. Recovery in treble but still attenuated
+  // 4. Complex multi-pole response
   
   const filters = [
-    // Strong bass rolloff - characteristic of Marshall tone stack
-    createHighPass(85, 0.8, sampleRate),
-    // Additional bass shaping
-    createLowShelf(180, -3, 0.9, sampleRate),
-    // Subtle mid character - slight dip
-    createPeaking(1200, -0.8, 1.5, sampleRate),
-    // Treble presence - gentle rise
-    createHighShelf(2500, 2.5, 0.7, sampleRate)
+    // Bass hump then rolloff - complex bass response
+    createLowShelf(60, 8, 0.5, sampleRate),      // Boost very low bass
+    createHighPass(25, 0.4, sampleRate),         // Then roll off sub-bass
+    createPeaking(100, 2, 0.8, sampleRate),      // Bass hump around 100Hz
+    
+    // The characteristic Marshall mid dip
+    createPeaking(740, -4, 2.0, sampleRate),     // Sharp dip at 740Hz
+    
+    // Overall attenuation and treble shaping
+    createLowShelf(200, -2, 0.7, sampleRate),    // General attenuation
+    createHighShelf(3000, -1, 0.8, sampleRate)   // Slight treble rolloff
   ];
   
   return filters;

@@ -79,35 +79,46 @@ export function calculateMarshallResponse(
   const Pmid = 25000;
   const Pbass = 1000000;
   
-  // More accurate potentiometer modeling
-  const Rt1 = Ptreble * treble;
-  const Rt2 = Ptreble * (1 - treble);
-  const Rm1 = Pmid * mid;
-  const Rm2 = Pmid * (1 - mid);
-  const Rb1 = Pbass * bass;
-  const Rb2 = Pbass * (1 - bass);
+  // Potentiometer modeling with proper taper
+  const Rt1 = Ptreble * treble + 1000; // Add small resistance to avoid division by zero
+  const Rt2 = Ptreble * (1 - treble) + 1000;
+  const Rm1 = Pmid * mid + 100;
+  const Rm2 = Pmid * (1 - mid) + 100;
+  const Rb1 = Pbass * bass + 1000;
+  const Rb2 = Pbass * (1 - bass) + 1000;
   
   // Complex impedances
   const ZC1 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C1, imag: 0 }));
   const ZC2 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C2, imag: 0 }));
   
-  // Better Marshall topology modeling
-  // Node 1: Input through R1 and treble pot
-  const Z1 = complexAdd({ real: R1, imag: 0 }, 
-    complexAdd(ZC1, { real: Rt1, imag: 0 }));
+  // Marshall topology - 3-node analysis
+  // Node 1: After slope resistor R1
+  const Z_treble_branch = complexAdd(ZC1, { real: Rt2, imag: 0 });
+  const Z_to_mid = complexAdd({ real: R2, imag: 0 }, { real: Rm1, imag: 0 });
   
-  // Node 2: Mid pot and bass interactions
-  const Z2 = complexAdd({ real: R2, imag: 0 }, { real: Rm1, imag: 0 });
-  const Z3 = complexAdd(ZC2, { real: Rb1, imag: 0 });
+  // Node 2: Mid wiper to bass network
+  const Z_bass_branch = complexAdd(ZC2, { real: Rb1, imag: 0 });
+  const Z_mid_to_ground = { real: Rm2, imag: 0 };
   
-  // Parallel combinations for Marshall characteristic
-  const Zparallel = complexDivide(
-    complexMultiply(Z2, Z3),
-    complexAdd(Z2, Z3)
+  // Parallel combination of mid-to-ground and bass branch
+  const Z_parallel_mid_bass = complexDivide(
+    complexMultiply(Z_mid_to_ground, Z_bass_branch),
+    complexAdd(Z_mid_to_ground, Z_bass_branch)
   );
   
-  const numerator = complexMultiply(Zparallel, { real: 0.8, imag: 0 });
-  const denominator = complexAdd(Z1, Zparallel);
+  // Total impedance from mid node
+  const Z_from_mid = complexAdd(Z_to_mid, Z_parallel_mid_bass);
+  
+  // Parallel combination of treble branch and path through mid
+  const Z_total_parallel = complexDivide(
+    complexMultiply(Z_treble_branch, Z_from_mid),
+    complexAdd(Z_treble_branch, Z_from_mid)
+  );
+  
+  // Transfer function
+  const Z_input = complexAdd({ real: R1, imag: 0 }, Z_total_parallel);
+  const numerator = Z_total_parallel;
+  const denominator = Z_input;
   
   return complexDivide(numerator, denominator);
 }

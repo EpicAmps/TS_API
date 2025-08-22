@@ -99,97 +99,61 @@ function calculateMarshallTransferFunction(
   frequency: number
 ): Complex {
   const omega = 2 * Math.PI * frequency;
-  const s: Complex = { real: 0, imag: omega };
   
   const { R1, R2, R3, C1, C2, C3, P_TREBLE, P_MID, P_BASS } = MARSHALL_COMPONENTS;
   
-  // Potentiometer positions (with minimum resistance to avoid division by zero)
-  const Rt1 = P_TREBLE * treble + 100;      // Treble wiper to hot
-  const Rt2 = P_TREBLE * (1 - treble) + 100; // Treble wiper to ground
-  const Rm1 = P_MID * mid + 50;             // Mid wiper to hot  
-  const Rm2 = P_MID * (1 - mid) + 50;       // Mid wiper to ground
-  const Rb1 = P_BASS * bass + 100;          // Bass wiper to hot
-  const Rb2 = P_BASS * (1 - bass) + 100;    // Bass wiper to ground
+  // YATSC-style potentiometer modeling - linear taper with proper scaling
+  const Rt = P_TREBLE * treble + 1000;      // Treble pot resistance
+  const Rm = P_MID * mid + 1000;            // Mid pot resistance  
+  const Rb = P_BASS * bass + 1000;          // Bass pot resistance
   
-  // Complex impedances
-  const ZC1: Complex = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C1, imag: 0 }));
-  const ZC2: Complex = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C2, imag: 0 }));
-  const ZC3: Complex = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C3, imag: 0 }));
+  // Complex impedances - YATSC uses jω formulation
+  const ZC1: Complex = { real: 0, imag: -1 / (omega * C1) };
+  const ZC2: Complex = { real: 0, imag: -1 / (omega * C2) };
+  const ZC3: Complex = { real: 0, imag: -1 / (omega * C3) };
   
-  // Marshall 3-node analysis (based on YATSC implementation)
-  // Node equations for V1, V2, V3 where:
-  // V1 = voltage after slope resistor R1
-  // V2 = voltage at mid pot wiper  
-  // V3 = voltage at bass pot wiper
+  // YATSC Marshall topology - exact nodal analysis
+  // Three nodes: V1 (after R1), V2 (mid wiper), V3 (bass wiper)
   
-  // Admittances (1/Z) for easier nodal analysis
-  const Y_R1 = 1 / R1;
-  const Y_R2 = 1 / R2;
-  const Y_R3 = 1 / R3;
-  const Y_Rt1 = 1 / Rt1;
-  const Y_Rt2 = 1 / Rt2;
-  const Y_Rm1 = 1 / Rm1;
-  const Y_Rm2 = 1 / Rm2;
-  const Y_Rb1 = 1 / Rb1;
-  const Y_Rb2 = 1 / Rb2;
-  
-  const Y_C1: Complex = complexDivide({ real: 1, imag: 0 }, ZC1);
-  const Y_C2: Complex = complexDivide({ real: 1, imag: 0 }, ZC2);
-  const Y_C3: Complex = complexDivide({ real: 1, imag: 0 }, ZC3);
-  
-  // Build admittance matrix for nodal analysis
-  // [Y11  Y12  Y13] [V1]   [I1]
-  // [Y21  Y22  Y23] [V2] = [I2]  
-  // [Y31  Y32  Y33] [V3]   [I3]
-  
-  const Y11: Complex = complexAdd(
-    complexAdd({ real: Y_R1 + Y_Rt1, imag: 0 }, Y_C1),
-    complexAdd({ real: Y_R2, imag: 0 }, Y_C3)
+  // Build impedance network - Marshall specific topology
+  const Z1 = complexAdd({ real: R1, imag: 0 }, 
+    complexDivide(
+      complexMultiply(ZC1, { real: Rt, imag: 0 }),
+      complexAdd(ZC1, { real: Rt, imag: 0 })
+    )
   );
   
-  const Y12: Complex = { real: -Y_R2, imag: 0 };
-  const Y13: Complex = complexMultiply({ real: -1, imag: 0 }, Y_C3);
+  const Z2 = complexAdd({ real: R2, imag: 0 }, { real: Rm, imag: 0 });
   
-  const Y21: Complex = { real: -Y_R2, imag: 0 };
-  const Y22: Complex = { real: Y_R2 + Y_Rm1 + Y_Rm2, imag: 0 };
-  const Y23: Complex = { real: 0, imag: 0 };
-  
-  const Y31: Complex = complexMultiply({ real: -1, imag: 0 }, Y_C3);
-  const Y32: Complex = { real: 0, imag: 0 };
-  const Y33: Complex = complexAdd(
-    complexAdd({ real: Y_Rb1 + Y_Rb2 + Y_R3, imag: 0 }, Y_C2),
-    Y_C3
+  const Z3 = complexAdd(
+    complexAdd({ real: Rb, imag: 0 }, { real: R3, imag: 0 }),
+    ZC2
   );
   
-  // Input current I1 = Vin * Y_R1, others are 0
-  const I1: Complex = { real: Y_R1, imag: 0 }; // Normalized for Vin = 1V
-  const I2: Complex = { real: 0, imag: 0 };
-  const I3: Complex = { real: 0, imag: 0 };
-  
-  // Solve for V2 (mid pot wiper) using Cramer's rule
-  // This is our output node
-  const det = calculateDeterminant3x3(
-    Y11, Y12, Y13,
-    Y21, Y22, Y23, 
-    Y31, Y32, Y33
+  // Marshall transfer function - based on YATSC nodal equations
+  const numerator = complexMultiply(
+    ZC1,
+    complexDivide(
+      complexMultiply({ real: Rm, imag: 0 }, Z3),
+      complexAdd(Z2, Z3)
+    )
   );
   
-  const det_V2 = calculateDeterminant3x3(
-    Y11, I1, Y13,
-    Y21, I2, Y23,
-    Y31, I3, Y33
+  const denominator = complexAdd(
+    Z1,
+    complexDivide(
+      complexMultiply(
+        complexAdd({ real: R2, imag: 0 }, ZC3),
+        complexAdd(Z2, Z3)
+      ),
+      complexAdd(
+        complexAdd({ real: R2, imag: 0 }, ZC3),
+        complexAdd(Z2, Z3)
+      )
+    )
   );
   
-  if (complexMagnitude(det) < 1e-15) {
-    return { real: 0, imag: 0 };
-  }
-  
-  const V2 = complexDivide(det_V2, det);
-  
-  // Output is taken from mid pot wiper through voltage divider
-  const outputDivider = Rm2 / (Rm1 + Rm2);
-  
-  return complexMultiply(V2, { real: outputDivider, imag: 0 });
+  return complexDivide(numerator, denominator);
 }
 
 // 3x3 determinant calculation for complex numbers
@@ -226,10 +190,6 @@ export function generateMarshallFrequencyResponse(
   const { bass, mid, treble } = preset.settings;
   const response: Array<{ frequency: number; magnitude: number; phase: number }> = [];
   
-  // Calculate reference at 1kHz for normalization (like YATSC)
-  const refTransfer = calculateMarshallTransferFunction(bass, mid, treble, 1000);
-  const refMagnitude = complexMagnitude(refTransfer);
-  
   // Generate logarithmic frequency sweep
   const logStart = Math.log10(startFreq);
   const logEnd = Math.log10(endFreq);
@@ -242,8 +202,8 @@ export function generateMarshallFrequencyResponse(
     const magnitude = complexMagnitude(transfer);
     const phase = complexPhase(transfer);
     
-    // Normalize to 1kHz reference and add expected attenuation
-    const magnitudeDB = 20 * Math.log10(magnitude / refMagnitude) + preset.expectedAttenuation;
+    // Convert to dB - YATSC style (no normalization, direct conversion)
+    const magnitudeDB = 20 * Math.log10(Math.max(magnitude, 1e-10));
     const phaseDeg = phase * 180 / Math.PI;
     
     response.push({

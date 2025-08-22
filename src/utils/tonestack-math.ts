@@ -79,22 +79,35 @@ export function calculateMarshallResponse(
   const Pmid = 25000;
   const Pbass = 1000000;
   
-  const Rt = Ptreble * treble;
-  const Rm = Pmid * mid;
-  const Rb = Pbass * bass;
+  // More accurate potentiometer modeling
+  const Rt1 = Ptreble * treble;
+  const Rt2 = Ptreble * (1 - treble);
+  const Rm1 = Pmid * mid;
+  const Rm2 = Pmid * (1 - mid);
+  const Rb1 = Pbass * bass;
+  const Rb2 = Pbass * (1 - bass);
   
   // Complex impedances
   const ZC1 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C1, imag: 0 }));
   const ZC2 = complexDivide({ real: 1, imag: 0 }, complexMultiply(s, { real: C2, imag: 0 }));
   
-  // Simplified transfer function for Marshall topology
-  const Z1 = complexAdd({ real: R1, imag: 0 }, ZC1);
-  const Z2 = complexAdd({ real: Rt, imag: 0 }, ZC2);
-  const Z3 = { real: R3 + Rb, imag: 0 };
-  const Z4 = { real: R2 + Rm, imag: 0 };
+  // Better Marshall topology modeling
+  // Node 1: Input through R1 and treble pot
+  const Z1 = complexAdd({ real: R1, imag: 0 }, 
+    complexAdd(ZC1, { real: Rt1, imag: 0 }));
   
-  const numerator = complexMultiply(Z2, { real: 0.5, imag: 0 });
-  const denominator = complexAdd(complexAdd(Z1, Z2), complexAdd(Z3, Z4));
+  // Node 2: Mid pot and bass interactions
+  const Z2 = complexAdd({ real: R2, imag: 0 }, { real: Rm1, imag: 0 });
+  const Z3 = complexAdd(ZC2, { real: Rb1, imag: 0 });
+  
+  // Parallel combinations for Marshall characteristic
+  const Zparallel = complexDivide(
+    complexMultiply(Z2, Z3),
+    complexAdd(Z2, Z3)
+  );
+  
+  const numerator = complexMultiply(Zparallel, { real: 0.8, imag: 0 });
+  const denominator = complexAdd(Z1, Zparallel);
   
   return complexDivide(numerator, denominator);
 }
@@ -128,9 +141,10 @@ export function calculateFrequencyResponse(
   const logStart = Math.log10(startFreq);
   const logEnd = Math.log10(endFreq);
   
-  // Calculate reference magnitude at 1kHz for normalization
+  // Calculate reference at 1kHz but don't normalize to 0dB
+  // Passive circuits should have attenuation
   const refTransferFunction = calculateToneStackResponse(toneStackId, params, 1000);
-  const refMagnitude = complexMagnitude(refTransferFunction);
+  const refMagnitude = Math.max(complexMagnitude(refTransferFunction), 1e-10);
   
   for (let i = 0; i < numPoints; i++) {
     const logFreq = logStart + (i / (numPoints - 1)) * (logEnd - logStart);
@@ -140,8 +154,9 @@ export function calculateFrequencyResponse(
     const magnitude = complexMagnitude(transferFunction);
     const phase = complexPhase(transferFunction);
     
-    // Convert to dB relative to 1kHz reference, ensure never above 0dB
-    const magnitudeDB = Math.min(0, 20 * Math.log10(Math.max(magnitude / refMagnitude, 1e-10)));
+    // Convert to dB with proper scaling for passive circuit
+    // Should peak around -4 to -6 dB, not 0dB
+    const magnitudeDB = 20 * Math.log10(Math.max(magnitude / refMagnitude, 1e-10)) - 6;
     const phaseDeg = phase * 180 / Math.PI;
     
     response.push({

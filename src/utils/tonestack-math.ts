@@ -121,6 +121,13 @@ export function calculateFenderTMBResponse(
   
   // Apply realistic scaling for Marshall (passive circuit, always < 0dB)
   return complexMultiply(transferFunction, { real: 0.3, imag: 0 });
+}
+
+// High frequency response (treble control effect)
+export function calculateHighFreqGain(omega: number, C1: number, Rt1: number, R1: number): ComplexNumber {
+  return complexDivide(
+    { real: 1, imag: 0 },
+    complexAdd(
       { real: 1, imag: 0 },
       complexMultiply(
         { real: omega * C1 * (Rt1 + R1), imag: 0 },
@@ -128,9 +135,11 @@ export function calculateFenderTMBResponse(
       )
     )
   );
-  
-  // Low frequency response (bass control effect)
-  const lowFreqGain = complexDivide(
+}
+
+// Low frequency response (bass control effect)
+export function calculateLowFreqGain(omega: number, C2: number, Rb1: number, R3: number): ComplexNumber {
+  return complexDivide(
     complexMultiply({ real: omega * C2 * Rb1, imag: 0 }, { real: 0, imag: 1 }),
     complexAdd(
       { real: 1, imag: 0 },
@@ -140,14 +149,18 @@ export function calculateFenderTMBResponse(
       )
     )
   );
-  
-  // Mid frequency response (mid control effect)
-  const midFreqGain = complexDivide(
+}
+
+// Mid frequency response (mid control effect)
+export function calculateMidFreqGain(Rm1: number, Rm2: number, R2: number): ComplexNumber {
+  return complexDivide(
     { real: Rm1, imag: 0 },
     { real: Rm1 + Rm2 + R2, imag: 0 }
   );
-  
-  // Combine all frequency responses
+}
+
+// Combine all frequency responses
+export function calculateTotalGain(highFreqGain: ComplexNumber, lowFreqGain: ComplexNumber, midFreqGain: ComplexNumber): ComplexNumber {
   const totalGain = complexMultiply(
     complexMultiply(highFreqGain, lowFreqGain),
     midFreqGain
